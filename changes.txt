@@ -1,0 +1,74 @@
+Linux 5.4 ARM - Summary of Changes for pidfd_open() Integration
+==============================================================
+
+This file documents all code changes, commands, and user prompts related to the integration and demonstration of the pidfd_open() syscall in the ARM Linux 5.4 kernel, as well as related project management actions.
+
+1. Added pidfd_open() System Call:
+----------------------------------
+- Implemented the pidfd_open() syscall for ARM in the kernel (linux-5.4/kernel/sys.c).
+- Added function: SYSCALL_DEFINE2(pidfd_open, pid_t pid, unsigned int flags)
+  - Validates input parameters (pid, flags)
+  - Uses find_get_pid() to look up the target process
+  - Ensures the pid is a thread-group leader
+  - Calls pidfd_create() to create a new pid file descriptor
+  - Returns the new pidfd or an error code
+- Added helper function: int pidfd_create(struct pid *pid)
+  - Creates a pidfd with O_CLOEXEC set
+  - Uses anon_inode_getfd and pidfd_fops
+  - Ensures proper reference counting for struct pid
+- Registered syscall in kernel syscall table (linux-5.4/arch/arm/tools/syscall.tbl)
+- Ensured proper error handling and resource cleanup
+
+2. System Call Table Update:
+----------------------------
+- Added an entry for pidfd_open in the ARM syscall table.
+- Syscall number: 434
+- Entry added: 434    common    pidfd_open    sys_pidfd_open
+
+3. Header Declaration:
+----------------------
+- Declared sys_pidfd_open() in the syscall header (linux-5.4/include/linux/syscalls.h).
+- Prototype added: asmlinkage long sys_pidfd_open(pid_t pid, unsigned int flags);
+
+4. Kconfig Option:
+------------------
+- Added a Kconfig option to enable/disable the pidfd_open syscall (linux-5.4/kernel/Kconfig).
+- Option allows configuration of pidfd_open support at build time.
+
+5. Duplicate Removal:
+---------------------
+- Removed duplicate definitions of pidfd_create and pidfd_open from linux-5.4/kernel/pid.c to avoid multiple definition linker errors.
+- Kept canonical implementations in linux-5.4/kernel/fork.c (pidfd_create) and linux-5.4/kernel/sys.c (pidfd_open).
+
+6. Test Program:
+----------------
+- Added a minimal C test program (pidfd_poll_demo.c) to fork a child, call pidfd_open via syscall(434, pid, 0), and poll the pidfd to detect child exit.
+- Location: ARM_HELP/pidfd_poll_demo.c and linux-5.4/kernel/pidfd_poll_demo.c
+
+7. QEMU Script:
+---------------
+- Provided and updated a script (run_arm_kernel_qemu.sh) to automate kernel and BusyBox build, initramfs creation, and QEMU boot.
+- Ensured test binary is included in initramfs.
+
+8. .gitignore:
+--------------
+- Added a top-level .gitignore to exclude kernel build artifacts, QEMU outputs, editor/IDE files, and test binaries.
+
+9. Repository Integration:
+--------------------------
+- Initialized git, committed all changes, and pushed to https://github.com/shashank1310/Linux5.4backPort.git (branches: main, shanks_main).
+
+10. User Commands and Prompts:
+------------------------------
+- Compiled pidfd_poll_demo.c for ARM using arm-linux-gnueabi-gcc.
+- Copied pidfd_poll_demo to initramfs/bin and regenerated initramfs-arm.cpio.gz.
+- Ran QEMU with graphical output (no -nographic) using the command:
+    qemu-system-arm -M vexpress-a9 -m 512M -kernel linux-5.4/arch/arm/boot/zImage -dtb linux-5.4/arch/arm/boot/dts/vexpress-v2p-ca9.dtb -initrd initramfs-arm.cpio.gz -append 'console=ttyAMA0 init=/init'
+- Demonstrated the usage of pidfd_poll_demo in QEMU shell.
+- Cleaned up the repo to keep only pidfd_poll_demo.c, Summary.txt, and changes.txt (later reverted).
+- Created Helper directory for organizing demo files.
+- Provided explanations for poll, demo expectations, and feature significance.
+
+---
+
+This file serves as a comprehensive changelog and instruction reference for the pidfd_open() integration and related demo/test activities in ARM Linux 5.4.
